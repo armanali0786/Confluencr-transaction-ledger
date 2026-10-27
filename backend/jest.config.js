@@ -10,6 +10,7 @@ const baseProject = {
   preset: 'ts-jest',
   testEnvironment: 'node',
   moduleNameMapper,
+  setupFiles: ['<rootDir>/tests/helpers/setup-env.ts'],
 };
 
 module.exports = {
