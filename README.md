@@ -112,6 +112,27 @@ npm run dev -w frontend    # http://localhost:5173
 If you changed `POSTGRES_PORT` / `POSTGRES_TEST_PORT`, update `DATABASE_URL` /
 `TEST_DATABASE_URL` in `backend/.env` to match.
 
+### Option C: Deploy to Render
+
+The repository includes a [Render Blueprint](render.yaml) that creates three resources: the API
+(Docker), a PostgreSQL database and the frontend (static site).
+
+1. In Render, choose **New → Blueprint** and select this repository. When prompted, enter
+   placeholder values for `CORS_ORIGIN` and `VITE_API_BASE_URL`.
+2. After the first deploy, copy the two service URLs and set:
+   - `ledger-api` → `CORS_ORIGIN` = the frontend URL, e.g. `https://ledger-web.onrender.com`
+   - `ledger-web` → `VITE_API_BASE_URL` = the API URL + `/api/v1`, e.g.
+     `https://ledger-api.onrender.com/api/v1`
+3. Redeploy both services. The frontend must be rebuilt, because Vite inlines the API URL.
+
+The API applies migrations on every start and seeds the demo accounts (`SEED_DEMO_DATA`).
+
+> **Created the API service by hand?** Its Docker build context must be the **repository
+> root**, because the workspaces share one lockfile. In the service settings, set
+> _Root Directory_ to empty, _Dockerfile Path_ to `./backend/Dockerfile` and _Docker Build
+> Context Directory_ to `.`. A `backend/` context fails with
+> `"/backend/docker-entrypoint.sh": not found`.
+
 ### Environment variables
 
 | Variable                                                      | Where    | Default / example                                       | Description                          |

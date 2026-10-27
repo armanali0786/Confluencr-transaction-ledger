@@ -30,6 +30,7 @@ COPY --chmod=755 backend/docker-entrypoint.sh ./backend/
 WORKDIR /app/backend
 USER node
 EXPOSE 4000
+# Platforms such as Render inject their own PORT, so the check follows it.
 HEALTHCHECK --interval=10s --timeout=3s --start-period=20s --retries=5 \
-  CMD wget -qO- http://127.0.0.1:4000/api/v1/health > /dev/null || exit 1
+  CMD wget -qO- "http://127.0.0.1:${PORT:-4000}/api/v1/health" > /dev/null || exit 1
 ENTRYPOINT ["./docker-entrypoint.sh"]

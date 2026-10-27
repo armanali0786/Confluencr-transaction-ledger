@@ -1,0 +1,70 @@
+# Render Blueprint: API (Docker) + PostgreSQL + frontend (static site).
+# Deploy: Render Dashboard → New → Blueprint → select this repository.
+# After the first deploy, set the two `sync: false` URLs (see README → Deploy to Render).
+
+databases:
+  - name: ledger-db
+    plan: free
+    databaseName: ledger
+    user: ledger
+    postgresMajorVersion: '16'
+    # Only Render services in this account may connect; no public access.
+    ipAllowList: []
+
+services:
+  - type: web
+    name: ledger-api
+    runtime: docker
+    plan: free
+    # npm workspaces share the root lockfile, so the build context must be the repo
+    # root. A `backend/` context fails with "docker-entrypoint.sh: not found".
+    dockerContext: .
+    dockerfilePath: ./backend/Dockerfile
+    healthCheckPath: /api/v1/health
+    buildFilter:
+      paths:
+        - backend/**
+        - package.json
+        - package-lock.json
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ledger-db
+          property: connectionString
+      - key: LOG_LEVEL
+        value: info
+      - key: SEED_DEMO_DATA
+        value: 'true'
+      # The frontend's URL, e.g. https://ledger-web.onrender.com (no trailing slash).
+      - key: CORS_ORIGIN
+        sync: false
+
+  - type: web
+    name: ledger-web
+    runtime: static
+    # Scripts are skipped: the frontend build needs neither Husky nor `prisma generate`.
+    buildCommand: npm ci --ignore-scripts && npm run build -w frontend
+    staticPublishPath: ./frontend/dist
+    buildFilter:
+      paths:
+        - frontend/**
+        - package.json
+        - package-lock.json
+    routes:
+      # Client-side routes (/accounts/:id, /transfer) all serve the SPA shell.
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+    envVars:
+      - key: NODE_VERSION
+        value: '20'
+      # The API's URL plus /api/v1, e.g. https://ledger-api.onrender.com/api/v1.
+      # Vite inlines it at build time, so redeploy the site after changing it.
+      - key: VITE_API_BASE_URL
+        sync: false
+      - key: VITE_CURRENCY
+        value: INR
