@@ -3,15 +3,22 @@ import { type Account, type Transaction, TransactionType } from '@prisma/client'
 import { prisma } from '@db/prisma';
 import type { DbClient } from '@db/types';
 import * as accountRepository from '@modules/account/account.repository';
+import { getAccountById } from '@modules/account/account.service';
 import { AppError } from '@shared/errors/app-error';
 import { ErrorCode } from '@shared/errors/error-codes';
 import { isPrismaError, PrismaErrorCode } from '@shared/errors/prisma-errors';
+import type { Pagination } from '@shared/utils/pagination';
 
 import type { CreateTransactionBody } from './transaction.schema';
 import * as transactionRepository from './transaction.repository';
 
 // Writers queue on the account row lock, so allow time to wait for it under contention.
 const TRANSACTION_OPTIONS = { maxWait: 5_000, timeout: 10_000 };
+
+export interface TransactionPage {
+  transactions: Transaction[];
+  totalRecords: number;
+}
 
 export interface CreatedTransaction {
   transaction: Transaction;
@@ -93,4 +100,29 @@ export async function createTransaction(input: CreateTransactionBody): Promise<C
       throw buildDuplicateError(referenceId);
     throw error;
   }
+}
+
+export async function getTransactionById(transactionId: string): Promise<Transaction> {
+  const transaction = await transactionRepository.findTransactionById(transactionId);
+
+  if (!transaction) {
+    throw new AppError(ErrorCode.TRANSACTION_NOT_FOUND, `Transaction ${transactionId} not found`);
+  }
+
+  return transaction;
+}
+
+export async function listAccountTransactions(
+  accountId: string,
+  { skip, limit }: Pagination,
+): Promise<TransactionPage> {
+  // An unknown account is a 404, not an empty history.
+  await getAccountById(accountId);
+
+  const [transactions, totalRecords] = await Promise.all([
+    transactionRepository.findTransactionsByAccount({ accountId, skip, take: limit }),
+    transactionRepository.countTransactionsByAccount(accountId),
+  ]);
+
+  return { transactions, totalRecords };
 }
