@@ -1,6 +1,7 @@
 import { type Account, type Transaction, TransactionType } from '@prisma/client';
 
 import { prisma } from '@db/prisma';
+import { LEDGER_TRANSACTION_OPTIONS } from '@db/transaction-options';
 import type { DbClient } from '@db/types';
 import * as accountRepository from '@modules/account/account.repository';
 import { getAccountById } from '@modules/account/account.service';
@@ -12,9 +13,6 @@ import type { Pagination } from '@shared/utils/pagination';
 import type { CreateTransactionBody } from './transaction.schema';
 import * as transactionRepository from './transaction.repository';
 
-// Writers queue on the account row lock, so allow time to wait for it under contention.
-const TRANSACTION_OPTIONS = { maxWait: 5_000, timeout: 10_000 };
-
 export interface TransactionPage {
   transactions: Transaction[];
   totalRecords: number;
@@ -25,14 +23,16 @@ export interface CreatedTransaction {
   account: Account;
 }
 
-function buildDuplicateError(referenceId: string): AppError {
+export type LedgerEntry = transactionRepository.NewTransaction;
+
+export function buildDuplicateError(referenceId: string): AppError {
   return new AppError(
     ErrorCode.DUPLICATE_TRANSACTION,
     `A transaction with reference_id '${referenceId}' already exists for this account`,
   );
 }
 
-async function lockExistingAccount(
+export async function lockExistingAccount(
   accountId: string,
   db: DbClient,
 ): Promise<accountRepository.LockedAccount> {
@@ -45,13 +45,17 @@ async function lockExistingAccount(
   return account;
 }
 
-export function assertSufficientBalance(balance: bigint, amount: bigint): void {
+export function assertSufficientBalance(
+  balance: bigint,
+  amount: bigint,
+  message = 'Insufficient balance for this debit',
+): void {
   if (balance < amount) {
-    throw new AppError(ErrorCode.INSUFFICIENT_BALANCE, 'Insufficient balance for this debit');
+    throw new AppError(ErrorCode.INSUFFICIENT_BALANCE, message);
   }
 }
 
-async function assertReferenceIsUnused(
+export async function assertReferenceIsUnused(
   accountId: string,
   referenceId: string,
   db: DbClient,
@@ -70,6 +74,24 @@ function toBalanceDelta(type: TransactionType, amount: bigint): bigint {
 }
 
 /**
+ * Appends one ledger row and applies it to the balance. Callers must already hold the
+ * account's row lock inside the same DB transaction.
+ */
+export async function recordLedgerEntry(
+  entry: LedgerEntry,
+  db: DbClient,
+): Promise<CreatedTransaction> {
+  const transaction = await transactionRepository.insertTransaction(entry, db);
+  const account = await accountRepository.incrementAccountBalance(
+    entry.accountId,
+    toBalanceDelta(entry.type, entry.amount),
+    db,
+  );
+
+  return { transaction, account };
+}
+
+/**
  * Records a credit or debit and updates the balance in one DB transaction. The account
  * row is locked first, so every check below sees a balance no one else can change.
  */
@@ -82,18 +104,8 @@ export async function createTransaction(input: CreateTransactionBody): Promise<C
       await assertReferenceIsUnused(accountId, referenceId, tx);
       if (type === TransactionType.debit) assertSufficientBalance(account.balance, amount);
 
-      const transaction = await transactionRepository.insertTransaction(
-        { accountId, type, amount, referenceId, description },
-        tx,
-      );
-      const updatedAccount = await accountRepository.incrementAccountBalance(
-        accountId,
-        toBalanceDelta(type, amount),
-        tx,
-      );
-
-      return { transaction, account: updatedAccount };
-    }, TRANSACTION_OPTIONS);
+      return recordLedgerEntry({ accountId, type, amount, referenceId, description }, tx);
+    }, LEDGER_TRANSACTION_OPTIONS);
   } catch (error) {
     // Fallback for a duplicate that slips past the pre-check (e.g. a lock-free code path).
     if (isPrismaError(error, PrismaErrorCode.UNIQUE_VIOLATION))
