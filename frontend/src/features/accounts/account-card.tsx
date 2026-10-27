@@ -10,26 +10,24 @@ export function AccountCard({ account }: { account: Account }) {
   return (
     <Link
       to={`/accounts/${account.id}`}
-      className="group block rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
+      className="group block rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
     >
-      <Card className="flex h-full flex-col p-5 transition-shadow group-hover:shadow-md group-hover:ring-brand-200">
+      <Card className="flex h-full flex-col p-6 transition-all group-hover:border-primary/30 group-hover:shadow-level-2">
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
-            <div className="rounded-lg bg-brand-50 p-2">
-              <Wallet className="size-5 text-brand-600" aria-hidden />
+            <div className="rounded-md bg-primary/8 p-2">
+              <Wallet className="size-5 text-primary" aria-hidden />
             </div>
-            <h3 className="truncate font-medium text-slate-900">{account.name}</h3>
+            <h3 className="truncate text-heading-sm text-ink">{account.name}</h3>
           </div>
           <ChevronRight
-            className="size-5 shrink-0 text-slate-300 transition-transform group-hover:translate-x-0.5 group-hover:text-brand-500"
+            className="size-5 shrink-0 text-ink-mute/50 transition-transform group-hover:translate-x-0.5 group-hover:text-primary"
             aria-hidden
           />
         </div>
-        <p className="mt-6 text-xs font-medium tracking-wide text-slate-500 uppercase">Balance</p>
-        <p className="mt-1 text-2xl font-semibold text-slate-900 tabular-nums">
-          {formatMoney(account.balance)}
-        </p>
-        <p className="mt-4 text-xs text-slate-400">Opened {formatDate(account.created_at)}</p>
+        <p className="mt-8 text-micro-cap text-ink-mute uppercase">Balance</p>
+        <p className="money mt-1.5 text-display-md text-ink">{formatMoney(account.balance)}</p>
+        <p className="mt-4 text-caption text-ink-mute">Opened {formatDate(account.created_at)}</p>
       </Card>
     </Link>
   );
@@ -37,12 +35,12 @@ export function AccountCard({ account }: { account: Account }) {
 
 export function AccountCardSkeleton() {
   return (
-    <Card className="p-5">
+    <Card className="p-6">
       <div className="flex items-center gap-3">
-        <Skeleton className="size-9 rounded-lg" />
+        <Skeleton className="size-9 rounded-md" />
         <Skeleton className="h-4 w-32" />
       </div>
-      <Skeleton className="mt-6 h-3 w-16" />
+      <Skeleton className="mt-8 h-2.5 w-14" />
       <Skeleton className="mt-2 h-7 w-36" />
       <Skeleton className="mt-4 h-3 w-24" />
     </Card>

@@ -52,7 +52,7 @@ export function TransactionTable({ accountId, page, onPageChange }: TransactionT
         action={
           <button
             type="button"
-            className="text-sm font-medium text-brand-600 hover:text-brand-700"
+            className="text-body-md text-primary hover:text-primary-deep"
             onClick={() => onPageChange(1)}
           >
             Go to the first page
@@ -100,15 +100,15 @@ function TransactionRow({ transaction }: { transaction: Transaction }) {
 
   return (
     <TableRow>
-      <TableCell className={cn(WIDE_ONLY, 'text-slate-500')}>
+      <TableCell className={cn(WIDE_ONLY, 'money text-body-tabular text-ink-mute')}>
         {formatDateTime(transaction.created_at)}
       </TableCell>
       <TableCell className="max-w-[12rem] sm:max-w-xs">
-        <p className="truncate font-medium text-slate-900">
-          {transaction.description ?? <span className="text-slate-400">No description</span>}
+        <p className="truncate text-ink">
+          {transaction.description ?? <span className="text-ink-mute">No description</span>}
         </p>
-        <p className="truncate font-mono text-xs text-slate-400">{transaction.reference_id}</p>
-        <p className="text-xs text-slate-500 sm:hidden">
+        <p className="truncate font-mono text-micro text-ink-mute">{transaction.reference_id}</p>
+        <p className="money text-caption text-ink-mute sm:hidden">
           {formatDateTime(transaction.created_at)}
           {transaction.transfer_id && ' · Transfer'}
         </p>
@@ -118,7 +118,7 @@ function TransactionRow({ transaction }: { transaction: Transaction }) {
           <TransactionTypeBadge type={transaction.type} />
           {transaction.transfer_id && (
             <Badge tone="brand">
-              <ArrowLeftRight className="size-3" aria-hidden />
+              <ArrowLeftRight className="size-3" strokeWidth={2.5} aria-hidden />
               Transfer
             </Badge>
           )}
@@ -126,8 +126,8 @@ function TransactionRow({ transaction }: { transaction: Transaction }) {
       </TableCell>
       <TableCell
         className={cn(
-          'text-right font-semibold tabular-nums',
-          isCredit ? 'text-emerald-600' : 'text-rose-600',
+          'money text-right text-body-md font-normal',
+          isCredit ? 'text-success' : 'text-ruby-ink',
         )}
       >
         {isCredit ? '+' : '−'}

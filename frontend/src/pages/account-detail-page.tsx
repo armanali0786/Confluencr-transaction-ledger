@@ -24,7 +24,7 @@ export function AccountDetailPage() {
     <>
       <Link
         to="/"
-        className="mb-6 inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-slate-900"
+        className="mb-6 inline-flex items-center gap-1.5 text-button-sm text-ink-secondary hover:text-ink"
       >
         <ArrowLeft className="size-4" aria-hidden />
         All accounts
@@ -55,9 +55,11 @@ export function AccountDetailPage() {
           )}
 
           <Card className="overflow-hidden">
-            <div className="border-b border-slate-200 px-4 py-4 sm:px-6">
-              <h2 className="font-semibold text-slate-900">Transactions</h2>
-              <p className="text-sm text-slate-500">Latest first. Ledger entries are permanent.</p>
+            <div className="border-b border-hairline px-4 py-5 sm:px-6">
+              <h2 className="text-heading-md text-ink">Transactions</h2>
+              <p className="mt-0.5 text-caption text-ink-mute">
+                Latest first. Ledger entries are permanent.
+              </p>
             </div>
             <TransactionTable accountId={accountId} page={page} onPageChange={setPage} />
           </Card>

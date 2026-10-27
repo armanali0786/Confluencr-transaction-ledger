@@ -82,8 +82,8 @@ export function TransferForm({
       </Field>
 
       <div className="flex justify-center" aria-hidden>
-        <div className="rounded-full bg-slate-100 p-1.5">
-          <ArrowDown className="size-4 text-slate-500" />
+        <div className="rounded-full border border-hairline bg-canvas-soft p-1.5">
+          <ArrowDown className="size-4 text-ink-mute" />
         </div>
       </div>
 

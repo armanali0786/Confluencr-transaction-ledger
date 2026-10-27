@@ -67,22 +67,26 @@ export function Modal({ isOpen, onClose, title, description, children }: ModalPr
 
   return createPortal(
     <div className="fixed inset-0 z-40 flex items-end justify-center sm:items-center sm:p-4">
-      <div className="absolute inset-0 bg-slate-900/50" aria-hidden onClick={onClose} />
+      <div
+        className="absolute inset-0 bg-ink/45 backdrop-blur-[2px]"
+        aria-hidden
+        onClick={onClose}
+      />
       <div
         ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={description ? descriptionId : undefined}
-        className="relative max-h-[90vh] w-full overflow-y-auto rounded-t-2xl bg-white p-6 shadow-xl sm:max-w-lg sm:rounded-2xl"
+        className="relative max-h-[90vh] w-full overflow-y-auto rounded-t-xl border border-hairline bg-canvas p-6 shadow-level-2 sm:max-w-lg sm:rounded-xl sm:p-8"
       >
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>
-            <h2 id={titleId} className="text-lg font-semibold text-slate-900">
+            <h2 id={titleId} className="text-heading-lg text-ink">
               {title}
             </h2>
             {description && (
-              <p id={descriptionId} className="mt-1 text-sm text-slate-500">
+              <p id={descriptionId} className="mt-1.5 text-body-md text-ink-mute">
                 {description}
               </p>
             )}
@@ -90,7 +94,7 @@ export function Modal({ isOpen, onClose, title, description, children }: ModalPr
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+            className="rounded-full p-1.5 text-ink-mute transition-colors hover:bg-canvas-soft hover:text-ink"
             aria-label="Close dialog"
           >
             <X className="size-5" aria-hidden />
