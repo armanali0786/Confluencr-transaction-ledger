@@ -6,3 +6,68 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+// Constraints Prisma cannot express (CHECKs, immutability triggers) live in the
+// `ledger_constraints` raw SQL migration.
+
+enum TransactionType {
+  credit
+  debit
+
+  @@map("transaction_type")
+}
+
+/// Balance is stored in minor units (paise/cents) and only changes inside the
+/// same DB transaction that inserts the matching ledger row.
+model Account {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String   @db.VarChar(100)
+  balance   BigInt   @default(0)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  transactions      Transaction[]
+  outgoingTransfers Transfer[]    @relation("TransferFromAccount")
+  incomingTransfers Transfer[]    @relation("TransferToAccount")
+
+  @@map("accounts")
+}
+
+/// Immutable ledger entry: a DB trigger rejects UPDATE and DELETE.
+model Transaction {
+  id          String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  accountId   String          @map("account_id") @db.Uuid
+  type        TransactionType
+  amount      BigInt
+  description String?         @db.VarChar(255)
+  referenceId String          @map("reference_id") @db.VarChar(64)
+  transferId  String?         @map("transfer_id") @db.Uuid
+  createdAt   DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  account  Account   @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  transfer Transfer? @relation(fields: [transferId], references: [id], onDelete: Restrict)
+
+  @@unique([accountId, referenceId])
+  @@index([accountId, createdAt(sort: Desc), id(sort: Desc)])
+  @@index([transferId])
+  @@map("transactions")
+}
+
+/// Account-to-account transfer; produces one debit and one credit transaction (Phase 7).
+model Transfer {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  fromAccountId String   @map("from_account_id") @db.Uuid
+  toAccountId   String   @map("to_account_id") @db.Uuid
+  amount        BigInt
+  description   String?  @db.VarChar(255)
+  referenceId   String   @unique @map("reference_id") @db.VarChar(64)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  fromAccount  Account       @relation("TransferFromAccount", fields: [fromAccountId], references: [id], onDelete: Restrict)
+  toAccount    Account       @relation("TransferToAccount", fields: [toAccountId], references: [id], onDelete: Restrict)
+  transactions Transaction[]
+
+  @@index([fromAccountId])
+  @@index([toAccountId])
+  @@map("transfers")
+}
