@@ -1,6 +1,6 @@
 const MINOR_UNITS_PER_MAJOR = 100n;
 const DECIMAL_PLACES = 2;
-const DECIMAL_AMOUNT_PATTERN = /^\d+(\.\d{1,2})?$/;
+export const DECIMAL_AMOUNT_PATTERN = /^\d+(\.\d{1,2})?$/;
 
 /**
  * Converts a decimal amount ("30", "30.5", "30.50") into minor units without ever
