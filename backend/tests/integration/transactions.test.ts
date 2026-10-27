@@ -8,6 +8,7 @@ import * as transactionRepository from '@modules/transaction/transaction.reposit
 
 import { resetDatabase } from '../helpers/database';
 import { createTestAccount, UNKNOWN_UUID } from '../helpers/fixtures';
+import { expectLedgerToReconcile } from '../helpers/ledger';
 
 const app = createApp();
 const TRANSACTIONS_URL = '/api/v1/transactions';
@@ -33,8 +34,9 @@ beforeEach(async () => {
   await resetDatabase();
 });
 
-afterEach(() => {
+afterEach(async () => {
   jest.restoreAllMocks();
+  await expectLedgerToReconcile();
 });
 
 afterAll(async () => {
@@ -147,7 +149,7 @@ describe('POST /api/v1/transactions', () => {
       message: 'Insufficient balance for this debit',
     });
     expect(await getBalance(account.id)).toBe(10_00n);
-    expect(await prisma.transaction.count()).toBe(0);
+    expect(await prisma.transaction.count({ where: { referenceId: 'OVERDRAW' } })).toBe(0);
   });
 
   it('returns 404 ACCOUNT_NOT_FOUND for an unknown account', async () => {
@@ -231,7 +233,9 @@ describe('atomicity and concurrency', () => {
     expect(statuses.filter((status) => status === 201)).toHaveLength(5);
     expect(statuses.filter((status) => status === 422)).toHaveLength(5);
     expect(await getBalance(account.id)).toBe(0n);
-    expect(await prisma.transaction.count({ where: { accountId: account.id } })).toBe(5);
+    expect(
+      await prisma.transaction.count({ where: { accountId: account.id, type: 'debit' } }),
+    ).toBe(5);
   });
 
   it('accepts only one of several parallel requests with the same reference_id', async () => {
@@ -268,7 +272,7 @@ describe('atomicity and concurrency', () => {
 
     expect(response.status).toBe(500);
     expect(response.body.error.code).toBe('INTERNAL_SERVER_ERROR');
-    expect(await prisma.transaction.count()).toBe(0);
+    expect(await prisma.transaction.count({ where: { referenceId: 'CRASH-1' } })).toBe(0);
     expect(await getBalance(account.id)).toBe(50_00n);
   });
 

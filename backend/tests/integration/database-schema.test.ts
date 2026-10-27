@@ -125,12 +125,16 @@ describe('reference uniqueness', () => {
 
 describe('accounts.updated_at trigger', () => {
   it('bumps updated_at on raw SQL balance updates', async () => {
-    const account = await createAccount();
+    // Start from a fixed past timestamp so the assertion never races the clock.
+    const staleUpdatedAt = new Date('2020-01-01T00:00:00.000Z');
+    const account = await prisma.account.create({
+      data: { name: 'Stale', createdAt: staleUpdatedAt, updatedAt: staleUpdatedAt },
+    });
 
     await prisma.$executeRaw`UPDATE "accounts" SET "balance" = "balance" + 100 WHERE "id" = ${account.id}::uuid`;
     const updated = await prisma.account.findUniqueOrThrow({ where: { id: account.id } });
 
     expect(updated.balance).toBe(100n);
-    expect(updated.updatedAt.getTime()).toBeGreaterThan(account.updatedAt.getTime());
+    expect(updated.updatedAt.getTime()).toBeGreaterThan(staleUpdatedAt.getTime());
   });
 });
