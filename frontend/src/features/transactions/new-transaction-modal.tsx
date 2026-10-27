@@ -77,29 +77,28 @@ function NewTransactionForm({ account, onDone }: { account: Account; onDone: () 
   return (
     <form onSubmit={onSubmit} noValidate className="space-y-5">
       <fieldset>
-        <legend className="mb-1.5 block text-sm font-medium text-slate-700">Type</legend>
-        <div className="grid grid-cols-2 gap-2 rounded-xl bg-slate-100 p-1">
+        <legend className="mb-1.5 block text-caption text-ink-secondary">Type</legend>
+        <div className="grid grid-cols-2 gap-1 rounded-full border border-hairline bg-canvas-soft p-1">
           {TYPE_OPTIONS.map(({ value, label, hint }) => (
             <label
               key={value}
               className={cn(
-                'cursor-pointer rounded-lg px-3 py-2 text-center transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-brand-600',
+                'cursor-pointer rounded-full px-3 py-2 text-center transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-primary',
                 selectedType === value
-                  ? 'bg-white shadow-sm ring-1 ring-slate-200'
-                  : 'text-slate-500 hover:text-slate-700',
+                  ? 'bg-canvas shadow-level-1'
+                  : 'text-ink-mute hover:text-ink',
               )}
             >
               <input type="radio" value={value} className="sr-only" {...register('type')} />
               <span
                 className={cn(
-                  'block text-sm font-semibold',
-                  selectedType === value &&
-                    (value === 'credit' ? 'text-emerald-600' : 'text-rose-600'),
+                  'block text-button-sm',
+                  selectedType === value && (value === 'credit' ? 'text-success' : 'text-ruby-ink'),
                 )}
               >
                 {label}
               </span>
-              <span className="block text-xs">{hint}</span>
+              <span className="block text-micro">{hint}</span>
             </label>
           ))}
         </div>

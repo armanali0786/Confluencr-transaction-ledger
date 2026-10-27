@@ -2,20 +2,20 @@ import type { ReactNode } from 'react';
 
 import { cn } from '@/lib/cn';
 
-type BadgeTone = 'success' | 'danger' | 'neutral' | 'brand';
+type BadgeTone = 'success' | 'danger' | 'brand';
 
 const TONE_CLASSES: Record<BadgeTone, string> = {
-  success: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20',
-  danger: 'bg-rose-50 text-rose-700 ring-rose-600/20',
-  neutral: 'bg-slate-100 text-slate-600 ring-slate-500/20',
-  brand: 'bg-brand-50 text-brand-700 ring-brand-600/20',
+  success: 'bg-success/10 text-success',
+  danger: 'bg-ruby/10 text-ruby-ink',
+  brand: 'bg-primary-subdued/45 text-primary-deep',
 };
 
+/** pill-tag-soft: all-caps micro label on a tinted pill. */
 export function Badge({ tone, children }: { tone: BadgeTone; children: ReactNode }) {
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium ring-1 ring-inset',
+        'inline-flex items-center gap-1 rounded-full px-2 py-1 text-micro-cap uppercase',
         TONE_CLASSES[tone],
       )}
     >

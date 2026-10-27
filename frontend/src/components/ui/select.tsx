@@ -15,7 +15,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
     <select
       ref={ref}
       aria-invalid={hasError || undefined}
-      className={cn(CONTROL_CLASSES, controlRingClasses(hasError), 'h-10 pr-8', className)}
+      className={cn(CONTROL_CLASSES, controlRingClasses(hasError), 'pr-8', className)}
       {...props}
     >
       {children}

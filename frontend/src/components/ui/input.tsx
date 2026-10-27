@@ -15,7 +15,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
     <input
       ref={ref}
       aria-invalid={hasError || undefined}
-      className={cn(CONTROL_CLASSES, controlRingClasses(hasError), 'h-10', className)}
+      className={cn(CONTROL_CLASSES, controlRingClasses(hasError), className)}
       {...props}
     />
   );

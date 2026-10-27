@@ -18,16 +18,16 @@ export function Pagination({ meta, onPageChange, isFetching = false }: Paginatio
   return (
     <nav
       aria-label="Pagination"
-      className="flex items-center justify-between gap-4 border-t border-slate-200 px-4 py-3"
+      className="flex items-center justify-between gap-4 border-t border-hairline px-4 py-3 sm:px-6"
     >
-      <p className="text-sm text-slate-500">
+      <p className="money text-caption text-ink-mute">
         {total === 0 ? (
           'No results'
         ) : (
           <>
-            Showing <span className="font-medium text-slate-700">{firstItem}</span>–
-            <span className="font-medium text-slate-700">{lastItem}</span> of{' '}
-            <span className="font-medium text-slate-700">{total}</span>
+            Showing <span className="text-ink">{firstItem}</span>–
+            <span className="text-ink">{lastItem}</span> of{' '}
+            <span className="text-ink">{total}</span>
           </>
         )}
       </p>

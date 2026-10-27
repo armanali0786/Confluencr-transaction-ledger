@@ -77,7 +77,7 @@ export function TransferPage() {
           title="You need at least two accounts"
           description="Transfers move money between your own accounts."
           action={
-            <Link to="/" className="text-sm font-medium text-brand-600 hover:text-brand-700">
+            <Link to="/" className="text-body-md text-primary hover:text-primary-deep">
               Go to accounts
             </Link>
           }
@@ -119,7 +119,7 @@ export function TransferPage() {
         title="Transfer money"
         description="Move funds between accounts. Both sides are recorded atomically."
       />
-      <Card className="p-6">{renderContent()}</Card>
+      <Card className="p-6 sm:p-8">{renderContent()}</Card>
     </div>
   );
 }
