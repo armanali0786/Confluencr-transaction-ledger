@@ -1,6 +1,6 @@
 import { prisma } from '@db/prisma';
 
-export interface UnreconciledAccount {
+interface UnreconciledAccount {
   id: string;
   balance: bigint;
   ledger_balance: bigint;

@@ -5,6 +5,5 @@ coverage
 package-lock.json
 backend/prisma/migrations
 
-# hand-written docs, not reformatted
-README.md
+# local planning notes, not part of the project docs
 implementationplan.md

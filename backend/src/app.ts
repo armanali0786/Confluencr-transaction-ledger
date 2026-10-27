@@ -8,9 +8,11 @@ import { httpLogger } from '@shared/middlewares/http-logger';
 import { notFoundHandler } from '@shared/middlewares/not-found-handler';
 import { REQUEST_ID_HEADER, requestId } from '@shared/middlewares/request-id';
 
+import { docsRouter } from './docs/swagger';
 import { apiRouter } from './routes';
 
-export const API_PREFIX = '/api/v1';
+const API_PREFIX = '/api/v1';
+const DOCS_PATH = '/api/docs';
 const JSON_BODY_LIMIT = '100kb';
 
 export function createApp(): Express {
@@ -24,6 +26,7 @@ export function createApp(): Express {
   app.use(express.json({ limit: JSON_BODY_LIMIT }));
 
   app.use(API_PREFIX, apiRouter);
+  app.use(DOCS_PATH, docsRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

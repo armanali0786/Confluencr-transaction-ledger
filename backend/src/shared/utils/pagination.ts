@@ -4,7 +4,7 @@ import { AppError } from '@shared/errors/app-error';
 import { ErrorCode } from '@shared/errors/error-codes';
 import { formatZodError } from '@shared/errors/format-zod-error';
 
-export const DEFAULT_PAGE = 1;
+const DEFAULT_PAGE = 1;
 export const DEFAULT_PAGE_SIZE = 10;
 export const MAX_PAGE_LIMIT = 100;
 
@@ -28,7 +28,7 @@ export interface Pagination {
   skip: number;
 }
 
-export interface PaginationMeta {
+interface PaginationMeta {
   current_page: number;
   page_size: number;
   total_records: number;

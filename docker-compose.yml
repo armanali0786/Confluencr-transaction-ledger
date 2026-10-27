@@ -3,7 +3,6 @@ name: ledger
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: ledger-postgres
     restart: unless-stopped
     environment:
       POSTGRES_USER: ledger
@@ -21,7 +20,6 @@ services:
 
   postgres-test:
     image: postgres:16-alpine
-    container_name: ledger-postgres-test
     restart: unless-stopped
     environment:
       POSTGRES_USER: ledger
@@ -36,6 +34,36 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    restart: unless-stopped
+    environment:
+      PORT: 4000
+      DATABASE_URL: postgresql://ledger:ledger@postgres:5432/ledger
+      LOG_LEVEL: info
+      CORS_ORIGIN: http://localhost:${WEB_PORT:-5173}
+      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-true}
+    ports:
+      - '${API_PORT:-4000}:4000'
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        VITE_API_BASE_URL: http://localhost:${API_PORT:-4000}/api/v1
+    restart: unless-stopped
+    ports:
+      - '${WEB_PORT:-5173}:80'
+    depends_on:
+      api:
+        condition: service_healthy
 
 volumes:
   postgres-data:

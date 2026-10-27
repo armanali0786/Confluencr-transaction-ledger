@@ -3,13 +3,13 @@ import type { Response } from 'express';
 import type { ErrorDetail } from '@shared/errors/app-error';
 import type { ErrorCode } from '@shared/errors/error-codes';
 
-export interface SuccessResponse<TData, TMeta = Record<string, unknown>> {
+interface SuccessResponse<TData, TMeta = Record<string, unknown>> {
   success: true;
   data: TData;
   meta?: TMeta;
 }
 
-export interface ErrorResponse {
+interface ErrorResponse {
   success: false;
   error: {
     code: ErrorCode;

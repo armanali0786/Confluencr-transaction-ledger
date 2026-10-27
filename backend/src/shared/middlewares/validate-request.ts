@@ -5,7 +5,7 @@ import { AppError, type ErrorDetail } from '@shared/errors/app-error';
 import { ErrorCode } from '@shared/errors/error-codes';
 import { formatZodError } from '@shared/errors/format-zod-error';
 
-export interface RequestSchemas {
+interface RequestSchemas {
   body?: ZodType;
   params?: ZodType;
   query?: ZodType;

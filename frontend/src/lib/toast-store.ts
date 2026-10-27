@@ -1,6 +1,6 @@
-export type ToastVariant = 'success' | 'error';
+type ToastVariant = 'success' | 'error';
 
-export interface Toast {
+interface Toast {
   id: number;
   variant: ToastVariant;
   title: string;

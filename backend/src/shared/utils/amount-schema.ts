@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { DECIMAL_AMOUNT_PATTERN, formatMinorUnits, toMinorUnits } from './money';
 
 /** Upper bound per operation; keeps balances far below the BIGINT ceiling. */
-export const MAX_AMOUNT_MINOR_UNITS = 1_000_000_000_00n;
+const MAX_AMOUNT_MINOR_UNITS = 1_000_000_000_00n;
 
 const NUMERIC_PATTERN = /^-?\d+(\.\d+)?$/;
 const NON_ZERO_DIGIT = /[1-9]/;

@@ -7,7 +7,7 @@ import type { Pagination } from '@shared/utils/pagination';
 import * as accountRepository from './account.repository';
 import type { CreateAccountBody } from './account.schema';
 
-export interface AccountPage {
+interface AccountPage {
   accounts: Account[];
   totalRecords: number;
 }

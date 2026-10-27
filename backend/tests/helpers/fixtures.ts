@@ -6,7 +6,7 @@ import { prisma } from '@db/prisma';
 
 export const UNKNOWN_UUID = '00000000-0000-4000-8000-000000000000';
 
-export const OPENING_BALANCE_REFERENCE = 'OPENING-BALANCE';
+const OPENING_BALANCE_REFERENCE = 'OPENING-BALANCE';
 
 /**
  * A non-zero starting balance is backed by an opening credit, so test data always
