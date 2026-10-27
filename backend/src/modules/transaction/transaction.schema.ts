@@ -31,3 +31,9 @@ export const createTransactionBodySchema = z.strictObject({
 });
 
 export type CreateTransactionBody = z.infer<typeof createTransactionBodySchema>;
+
+export const transactionIdParamsSchema = z.object({
+  transactionId: z.uuid({ error: 'transactionId must be a valid UUID' }),
+});
+
+export type TransactionIdParams = z.infer<typeof transactionIdParamsSchema>;
