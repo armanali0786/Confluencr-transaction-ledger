@@ -9,7 +9,7 @@ import { formatMinorUnits } from '@shared/utils/money';
 
 import type { CompletedTransfer } from './transfer.service';
 
-export interface TransferResponse {
+interface TransferResponse {
   id: string;
   from_account_id: string;
   to_account_id: string;
@@ -19,13 +19,13 @@ export interface TransferResponse {
   created_at: string;
 }
 
-export interface CompletedTransferResponse {
+interface CompletedTransferResponse {
   transfer: TransferResponse;
   transactions: { debit: TransactionResponse; credit: TransactionResponse };
   accounts: { from: AccountResponse; to: AccountResponse };
 }
 
-export function toTransferResponse(transfer: Transfer): TransferResponse {
+function toTransferResponse(transfer: Transfer): TransferResponse {
   return {
     id: transfer.id,
     from_account_id: transfer.fromAccountId,

@@ -6,7 +6,7 @@ import { toast } from '@/lib/toast-store';
 
 export const ACCOUNTS_PAGE_SIZE = 9;
 /** The API's maximum page size; enough to populate account pickers for this app. */
-export const ACCOUNT_PICKER_LIMIT = 100;
+const ACCOUNT_PICKER_LIMIT = 100;
 
 export function useAccounts(page: number, limit = ACCOUNTS_PAGE_SIZE) {
   const params = { page, limit };

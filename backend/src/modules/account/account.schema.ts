@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const ACCOUNT_NAME_MAX_LENGTH = 100;
+const ACCOUNT_NAME_MAX_LENGTH = 100;
 
 export const createAccountBodySchema = z.strictObject({
   name: z

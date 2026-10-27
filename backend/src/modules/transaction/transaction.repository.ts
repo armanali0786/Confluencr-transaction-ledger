@@ -26,7 +26,7 @@ export function findTransactionByReference(
   });
 }
 
-export interface FindAccountTransactionsOptions {
+interface FindAccountTransactionsOptions {
   accountId: string;
   skip: number;
   take: number;

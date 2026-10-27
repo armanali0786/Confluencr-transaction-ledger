@@ -3,8 +3,8 @@ import { z } from 'zod';
 
 import { amountSchema } from '@shared/utils/amount-schema';
 
-export const REFERENCE_ID_MAX_LENGTH = 64;
-export const DESCRIPTION_MAX_LENGTH = 255;
+const REFERENCE_ID_MAX_LENGTH = 64;
+const DESCRIPTION_MAX_LENGTH = 255;
 
 export const referenceIdSchema = z
   .string({ error: 'reference_id is required and must be a string' })

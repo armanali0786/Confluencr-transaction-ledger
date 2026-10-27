@@ -13,19 +13,19 @@ import type { Pagination } from '@shared/utils/pagination';
 import type { CreateTransactionBody } from './transaction.schema';
 import * as transactionRepository from './transaction.repository';
 
-export interface TransactionPage {
+interface TransactionPage {
   transactions: Transaction[];
   totalRecords: number;
 }
 
-export interface CreatedTransaction {
+interface CreatedTransaction {
   transaction: Transaction;
   account: Account;
 }
 
-export type LedgerEntry = transactionRepository.NewTransaction;
+type LedgerEntry = transactionRepository.NewTransaction;
 
-export function buildDuplicateError(referenceId: string): AppError {
+function buildDuplicateError(referenceId: string): AppError {
   return new AppError(
     ErrorCode.DUPLICATE_TRANSACTION,
     `A transaction with reference_id '${referenceId}' already exists for this account`,

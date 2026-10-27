@@ -12,7 +12,7 @@ const envSchema = z.object({
   CORS_ORIGIN: z.string().min(1).default('http://localhost:5173'),
 });
 
-export type Env = z.infer<typeof envSchema>;
+type Env = z.infer<typeof envSchema>;
 
 function loadEnv(): Env {
   const parsed = envSchema.safeParse(process.env);

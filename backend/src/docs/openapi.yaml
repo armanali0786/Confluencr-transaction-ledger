@@ -1,0 +1,578 @@
+openapi: 3.0.3
+info:
+  title: Ledger API
+  version: 1.0.0
+  description: |
+    Accounts, immutable credit/debit transactions and atomic account-to-account transfers.
+
+    **Conventions**
+    - JSON fields are `snake_case`.
+    - Money is sent as a number or numeric string with at most 2 decimals and is always
+      returned as a 2-decimal string (e.g. `"100.00"`). It is stored in minor units, so
+      there is no floating-point drift.
+    - Every response uses an envelope: `{ success, data, meta? }` or `{ success: false, error }`.
+    - Every response carries an `X-Request-Id` header. A well-formed incoming
+      `X-Request-Id` (letters, digits, `_`, `-`; max 128 chars) is echoed back.
+    - Transactions and transfers are immutable: `PUT`, `PATCH` and `DELETE` return `405`.
+servers:
+  - url: /api/v1
+    description: This server
+# Authentication is out of scope for this service (see docs/ASSUMPTIONS.md).
+security: []
+tags:
+  - name: Health
+    description: Liveness and database connectivity.
+  - name: Accounts
+    description: Accounts and their current balances.
+  - name: Transactions
+    description: Immutable credit and debit ledger entries.
+  - name: Transfers
+    description: Atomic money movement between two accounts.
+
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: App and database health
+      operationId: getHealth
+      responses:
+        '200':
+          description: The API is up and the database is reachable.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success: { type: boolean, enum: [true] }
+                  data: { $ref: '#/components/schemas/Health' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+
+  /accounts:
+    post:
+      tags: [Accounts]
+      summary: Create an account
+      description: New accounts always start with a balance of `0.00`. Unknown fields are rejected.
+      operationId: createAccount
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateAccountRequest' }
+            example: { name: Alice Operating Account }
+      responses:
+        '201':
+          description: Account created.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AccountEnvelope' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '413': { $ref: '#/components/responses/PayloadTooLarge' }
+    get:
+      tags: [Accounts]
+      summary: List accounts
+      description: Newest first (`created_at DESC, id DESC`).
+      operationId: listAccounts
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: A page of accounts.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data, meta]
+                properties:
+                  success: { type: boolean, enum: [true] }
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Account' }
+                  meta: { $ref: '#/components/schemas/PaginationMeta' }
+        '400': { $ref: '#/components/responses/InvalidPagination' }
+
+  /accounts/{accountId}:
+    get:
+      tags: [Accounts]
+      summary: Get an account with its current balance
+      operationId: getAccount
+      parameters:
+        - $ref: '#/components/parameters/AccountId'
+      responses:
+        '200':
+          description: The account.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AccountEnvelope' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '404': { $ref: '#/components/responses/AccountNotFound' }
+
+  /accounts/{accountId}/transactions:
+    get:
+      tags: [Transactions]
+      summary: List an account's transactions
+      description: |
+        Latest first, ordered by `created_at DESC, id DESC` (id is a stable tie-breaker).
+        A page past the end returns an empty `data` array with correct `meta`.
+      operationId: listAccountTransactions
+      parameters:
+        - $ref: '#/components/parameters/AccountId'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: A page of transactions.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data, meta]
+                properties:
+                  success: { type: boolean, enum: [true] }
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Transaction' }
+                  meta: { $ref: '#/components/schemas/PaginationMeta' }
+              example:
+                success: true
+                data:
+                  - id: 94f5ec8d-73d7-4485-a6b2-b94486aaa034
+                    account_id: 6f1c2a3b-4d5e-4f60-8a7b-1c2d3e4f5a01
+                    type: debit
+                    amount: '20.00'
+                    description: Office supplies
+                    reference_id: INV-1002
+                    transfer_id: null
+                    created_at: '2026-01-15T10:32:45.681Z'
+                meta: { current_page: 1, page_size: 10, total_records: 4, total_pages: 1 }
+        '400':
+          description: Malformed `accountId` (`VALIDATION_ERROR`) or bad `page`/`limit` (`INVALID_PAGINATION`).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+        '404': { $ref: '#/components/responses/AccountNotFound' }
+
+  /transactions:
+    post:
+      tags: [Transactions]
+      summary: Record a credit or debit
+      description: |
+        Runs in a single database transaction: the account row is locked
+        (`SELECT … FOR UPDATE`), the reference and balance are checked, the ledger row is
+        inserted and the balance updated. Any failure rolls everything back.
+      operationId: createTransaction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateTransactionRequest' }
+            example:
+              account_id: 6f1c2a3b-4d5e-4f60-8a7b-1c2d3e4f5a01
+              type: debit
+              amount: 30
+              reference_id: INV-1001
+              description: Office supplies
+      responses:
+        '201':
+          description: Transaction recorded; includes the account with its new balance.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success: { type: boolean, enum: [true] }
+                  data: { $ref: '#/components/schemas/CreatedTransaction' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '404': { $ref: '#/components/responses/AccountNotFound' }
+        '409':
+          description: The `reference_id` was already used for this account.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+              example:
+                success: false
+                error:
+                  code: DUPLICATE_TRANSACTION
+                  message: A transaction with reference_id 'INV-1001' already exists for this account
+        '422':
+          description: The debit exceeds the current balance.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+              example:
+                success: false
+                error: { code: INSUFFICIENT_BALANCE, message: Insufficient balance for this debit }
+        '405': { $ref: '#/components/responses/MethodNotAllowed' }
+
+  /transactions/{transactionId}:
+    get:
+      tags: [Transactions]
+      summary: Get a single transaction
+      operationId: getTransaction
+      parameters:
+        - name: transactionId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: The transaction.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success: { type: boolean, enum: [true] }
+                  data: { $ref: '#/components/schemas/Transaction' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '404':
+          description: No transaction with this id.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+              example:
+                success: false
+                error:
+                  code: TRANSACTION_NOT_FOUND
+                  message: Transaction 00000000-0000-4000-8000-000000000000 not found
+        '405': { $ref: '#/components/responses/MethodNotAllowed' }
+
+  /transfers:
+    post:
+      tags: [Transfers]
+      summary: Transfer money between two accounts
+      description: |
+        Runs in a single database transaction. Both accounts are locked in ascending id
+        order (preventing deadlocks between opposite-direction transfers); then a transfer
+        row, a debit on the source and a credit on the destination (linked by
+        `transfer_id`) are written and both balances updated — or nothing is.
+
+        The transfer `reference_id` must be unused by any transfer and by any transaction
+        on either account, because both ledger entries carry it.
+      operationId: createTransfer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateTransferRequest' }
+            example:
+              from_account_id: 6f1c2a3b-4d5e-4f60-8a7b-1c2d3e4f5a01
+              to_account_id: 6f1c2a3b-4d5e-4f60-8a7b-1c2d3e4f5a02
+              amount: '30.00'
+              reference_id: TRF-2001
+              description: Rent share
+      responses:
+        '201':
+          description: Transfer completed.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, data]
+                properties:
+                  success: { type: boolean, enum: [true] }
+                  data: { $ref: '#/components/schemas/CompletedTransfer' }
+        '400':
+          description: Invalid body (`VALIDATION_ERROR`) or source equals destination (`SAME_ACCOUNT_TRANSFER`).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+              example:
+                success: false
+                error:
+                  code: SAME_ACCOUNT_TRANSFER
+                  message: from_account_id and to_account_id must be different accounts
+        '404': { $ref: '#/components/responses/AccountNotFound' }
+        '409':
+          description: The `reference_id` is already in use.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+              example:
+                success: false
+                error:
+                  code: DUPLICATE_TRANSACTION
+                  message: A transfer or transaction with reference_id 'TRF-2001' already exists
+        '422':
+          description: The source balance is lower than the amount.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+              example:
+                success: false
+                error:
+                  { code: INSUFFICIENT_BALANCE, message: Insufficient balance for this transfer }
+        '405': { $ref: '#/components/responses/MethodNotAllowed' }
+
+components:
+  parameters:
+    AccountId:
+      name: accountId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+      example: 6f1c2a3b-4d5e-4f60-8a7b-1c2d3e4f5a01
+    Page:
+      name: page
+      in: query
+      description: 1-based page number.
+      schema: { type: integer, minimum: 1, default: 1 }
+    Limit:
+      name: limit
+      in: query
+      description: Page size.
+      schema: { type: integer, minimum: 1, maximum: 100, default: 10 }
+
+  schemas:
+    Money:
+      type: string
+      pattern: '^\d+\.\d{2}$'
+      description: Decimal amount with exactly 2 places.
+      example: '100.00'
+    AmountInput:
+      description: >-
+        Greater than 0, at most 2 decimal places, at most 1000000000.00. A number or a
+        numeric string (strings avoid any client-side float rounding).
+      oneOf:
+        - type: number
+          minimum: 0.01
+          maximum: 1000000000
+          example: 30.5
+        - type: string
+          pattern: '^\d+(\.\d{1,2})?$'
+          example: '30.50'
+    ReferenceId:
+      type: string
+      minLength: 1
+      maxLength: 64
+      description: Idempotency reference, trimmed. Unique per account for transactions.
+      example: INV-1001
+    Description:
+      type: string
+      maxLength: 255
+      nullable: true
+      description: Optional, trimmed; an empty string is stored as `null`.
+      example: Office supplies
+
+    Health:
+      type: object
+      required: [status, database, uptime_seconds, timestamp]
+      properties:
+        status: { type: string, enum: [ok] }
+        database: { type: string, enum: [up] }
+        uptime_seconds: { type: integer, example: 42 }
+        timestamp: { type: string, format: date-time }
+
+    CreateAccountRequest:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 100, description: Trimmed. }
+    Account:
+      type: object
+      required: [id, name, balance, created_at, updated_at]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string, example: Alice Operating Account }
+        balance: { $ref: '#/components/schemas/Money' }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    AccountEnvelope:
+      type: object
+      required: [success, data]
+      properties:
+        success: { type: boolean, enum: [true] }
+        data: { $ref: '#/components/schemas/Account' }
+
+    CreateTransactionRequest:
+      type: object
+      additionalProperties: false
+      required: [account_id, type, amount, reference_id]
+      properties:
+        account_id: { type: string, format: uuid }
+        type: { type: string, enum: [credit, debit] }
+        amount: { $ref: '#/components/schemas/AmountInput' }
+        reference_id: { $ref: '#/components/schemas/ReferenceId' }
+        description: { $ref: '#/components/schemas/Description' }
+    Transaction:
+      type: object
+      required: [id, account_id, type, amount, description, reference_id, transfer_id, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        account_id: { type: string, format: uuid }
+        type: { type: string, enum: [credit, debit] }
+        amount: { $ref: '#/components/schemas/Money' }
+        description: { type: string, nullable: true }
+        reference_id: { type: string }
+        transfer_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Set when the entry is one side of a transfer.
+        created_at: { type: string, format: date-time }
+    CreatedTransaction:
+      type: object
+      required: [transaction, account]
+      properties:
+        transaction: { $ref: '#/components/schemas/Transaction' }
+        account: { $ref: '#/components/schemas/Account' }
+
+    CreateTransferRequest:
+      type: object
+      additionalProperties: false
+      required: [from_account_id, to_account_id, amount, reference_id]
+      properties:
+        from_account_id: { type: string, format: uuid }
+        to_account_id: { type: string, format: uuid }
+        amount: { $ref: '#/components/schemas/AmountInput' }
+        reference_id: { $ref: '#/components/schemas/ReferenceId' }
+        description: { $ref: '#/components/schemas/Description' }
+    Transfer:
+      type: object
+      required: [id, from_account_id, to_account_id, amount, description, reference_id, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        from_account_id: { type: string, format: uuid }
+        to_account_id: { type: string, format: uuid }
+        amount: { $ref: '#/components/schemas/Money' }
+        description: { type: string, nullable: true }
+        reference_id: { type: string }
+        created_at: { type: string, format: date-time }
+    CompletedTransfer:
+      type: object
+      required: [transfer, transactions, accounts]
+      properties:
+        transfer: { $ref: '#/components/schemas/Transfer' }
+        transactions:
+          type: object
+          required: [debit, credit]
+          properties:
+            debit: { $ref: '#/components/schemas/Transaction' }
+            credit: { $ref: '#/components/schemas/Transaction' }
+        accounts:
+          type: object
+          description: Both accounts with their balances after the transfer.
+          required: [from, to]
+          properties:
+            from: { $ref: '#/components/schemas/Account' }
+            to: { $ref: '#/components/schemas/Account' }
+
+    PaginationMeta:
+      type: object
+      required: [current_page, page_size, total_records, total_pages]
+      properties:
+        current_page: { type: integer, example: 1 }
+        page_size: { type: integer, example: 10 }
+        total_records: { type: integer, example: 4 }
+        total_pages: { type: integer, example: 1 }
+
+    ErrorCode:
+      type: string
+      enum:
+        - VALIDATION_ERROR
+        - INVALID_REQUEST_BODY
+        - INVALID_PAGINATION
+        - SAME_ACCOUNT_TRANSFER
+        - ACCOUNT_NOT_FOUND
+        - TRANSACTION_NOT_FOUND
+        - RESOURCE_NOT_FOUND
+        - ROUTE_NOT_FOUND
+        - METHOD_NOT_ALLOWED
+        - DUPLICATE_TRANSACTION
+        - CONFLICT
+        - PAYLOAD_TOO_LARGE
+        - INSUFFICIENT_BALANCE
+        - SERVICE_UNAVAILABLE
+        - INTERNAL_SERVER_ERROR
+    ErrorEnvelope:
+      type: object
+      required: [success, error]
+      properties:
+        success: { type: boolean, enum: [false] }
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { $ref: '#/components/schemas/ErrorCode' }
+            message: { type: string }
+            details:
+              type: array
+              description: Present for field-level validation errors.
+              items:
+                type: object
+                required: [field, message]
+                properties:
+                  field: { type: string, example: amount }
+                  message: { type: string, example: amount must be greater than 0 }
+
+  responses:
+    ValidationError:
+      description: >-
+        Invalid input: `VALIDATION_ERROR` (with per-field `details`) or
+        `INVALID_REQUEST_BODY` (malformed JSON).
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+          example:
+            success: false
+            error:
+              code: VALIDATION_ERROR
+              message: Request validation failed
+              details:
+                - { field: amount, message: amount must be greater than 0 }
+    InvalidPagination:
+      description: '`page` or `limit` is not an integer, below 1, or `limit` exceeds 100.'
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+          example:
+            success: false
+            error:
+              code: INVALID_PAGINATION
+              message: Invalid pagination parameters
+              details:
+                - { field: limit, message: limit must not exceed 100 }
+    AccountNotFound:
+      description: No account with this id.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+          example:
+            success: false
+            error:
+              code: ACCOUNT_NOT_FOUND
+              message: Account 00000000-0000-4000-8000-000000000000 not found
+    MethodNotAllowed:
+      description: Ledger records are immutable; the `Allow` header lists supported methods.
+      headers:
+        Allow:
+          schema: { type: string }
+          example: GET, HEAD
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+          example:
+            success: false
+            error:
+              code: METHOD_NOT_ALLOWED
+              message: 'Method DELETE is not allowed on /api/v1/transactions/94f5ec8d-73d7-4485-a6b2-b94486aaa034: transactions are immutable'
+    PayloadTooLarge:
+      description: Request body exceeds 100kb.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+          example:
+            success: false
+            error: { code: PAYLOAD_TOO_LARGE, message: Request body is too large }
+    ServiceUnavailable:
+      description: The database cannot be reached.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorEnvelope' }
+          example:
+            success: false
+            error: { code: SERVICE_UNAVAILABLE, message: Database is unavailable }

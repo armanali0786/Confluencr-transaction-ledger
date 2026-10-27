@@ -2,7 +2,7 @@ import { prisma } from '@db/prisma';
 import { AppError } from '@shared/errors/app-error';
 import { ErrorCode } from '@shared/errors/error-codes';
 
-export interface HealthStatus {
+interface HealthStatus {
   status: 'ok';
   database: 'up';
   uptimeSeconds: number;

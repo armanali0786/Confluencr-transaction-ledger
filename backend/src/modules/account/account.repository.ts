@@ -3,7 +3,7 @@ import type { Account } from '@prisma/client';
 import { prisma } from '@db/prisma';
 import type { DbClient } from '@db/types';
 
-export interface FindAccountsOptions {
+interface FindAccountsOptions {
   skip: number;
   take: number;
 }
