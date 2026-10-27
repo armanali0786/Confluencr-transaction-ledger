@@ -30,3 +30,25 @@ export function findAccounts(
 export function countAccounts(db: DbClient = prisma): Promise<number> {
   return db.account.count();
 }
+
+export interface LockedAccount {
+  id: string;
+  balance: bigint;
+}
+
+/**
+ * Takes a row-level lock that is held until the surrounding DB transaction ends, so
+ * concurrent writers for the same account are serialised and read a fresh balance.
+ * Must be called inside `prisma.$transaction`.
+ */
+export async function lockAccountById(id: string, db: DbClient): Promise<LockedAccount | null> {
+  const rows = await db.$queryRaw<LockedAccount[]>`
+    SELECT "id", "balance" FROM "accounts" WHERE "id" = ${id}::uuid FOR UPDATE
+  `;
+  return rows[0] ?? null;
+}
+
+/** Applies a signed delta atomically in SQL (balance = balance + delta). */
+export function incrementAccountBalance(id: string, delta: bigint, db: DbClient): Promise<Account> {
+  return db.account.update({ where: { id }, data: { balance: { increment: delta } } });
+}

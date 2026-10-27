@@ -4,13 +4,11 @@ import { ZodError } from 'zod';
 import { AppError } from './app-error';
 import { ErrorCode } from './error-codes';
 import { formatZodError } from './format-zod-error';
+import { isPrismaError, PrismaErrorCode } from './prisma-errors';
 
 interface BodyParserError extends Error {
   type: string;
 }
-
-const PRISMA_UNIQUE_VIOLATION = 'P2002';
-const PRISMA_RECORD_NOT_FOUND = 'P2025';
 
 function isBodyParserError(error: unknown): error is BodyParserError {
   return error instanceof Error && typeof (error as Partial<BodyParserError>).type === 'string';
@@ -26,11 +24,11 @@ function fromBodyParserError(error: BodyParserError): AppError | undefined {
   return undefined;
 }
 
-function fromPrismaKnownError(error: Prisma.PrismaClientKnownRequestError): AppError | undefined {
-  if (error.code === PRISMA_UNIQUE_VIOLATION) {
+function fromPrismaError(error: unknown): AppError | undefined {
+  if (isPrismaError(error, PrismaErrorCode.UNIQUE_VIOLATION)) {
     return new AppError(ErrorCode.CONFLICT, 'Resource already exists');
   }
-  if (error.code === PRISMA_RECORD_NOT_FOUND) {
+  if (isPrismaError(error, PrismaErrorCode.RECORD_NOT_FOUND)) {
     return new AppError(ErrorCode.RESOURCE_NOT_FOUND, 'Resource not found');
   }
   return undefined;
@@ -50,7 +48,7 @@ export function toAppError(error: unknown): AppError {
 
   const mapped =
     (isBodyParserError(error) && fromBodyParserError(error)) ||
-    (error instanceof Prisma.PrismaClientKnownRequestError && fromPrismaKnownError(error)) ||
+    fromPrismaError(error) ||
     (error instanceof Prisma.PrismaClientInitializationError &&
       new AppError(ErrorCode.SERVICE_UNAVAILABLE, 'Database is unavailable'));
 
