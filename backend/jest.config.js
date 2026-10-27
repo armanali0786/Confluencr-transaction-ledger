@@ -25,6 +25,7 @@ module.exports = {
       ...baseProject,
       displayName: 'integration',
       testMatch: ['<rootDir>/tests/integration/**/*.test.ts'],
+      globalSetup: '<rootDir>/tests/helpers/global-setup.ts',
     },
   ],
 };
