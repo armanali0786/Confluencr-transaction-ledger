@@ -13,7 +13,7 @@ account-to-account transfers.**
 ![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
 
-[Overview](#overview) · [Run locally](#run-locally) · [API](#api) · [Architecture](#architecture) ·
+[Overview](#overview) · [Screenshots](#screenshots) · [Run locally](#run-locally) · [API](#api) · [Architecture](#architecture) ·
 [Testing](#testing) · [Assumptions](docs/ASSUMPTIONS.md)
 
 </div>
@@ -41,6 +41,12 @@ These guarantees are proven by tests, not just claimed. Highlights:
 - 20 concurrent A→B / B→A transfers → no deadlock.
 - A forced crash between debit and credit → nothing persisted.
 - After every API-driven test, every account satisfies `balance == SUM(credits) − SUM(debits)`.
+
+## Screenshots
+
+| Accounts                                        | Account detail                                         | Transfer                                        |
+| ----------------------------------------------- | ------------------------------------------------------ | ----------------------------------------------- |
+| ![Accounts list](docs/screenshots/accounts.png) | ![Account detail](docs/screenshots/account-detail.png) | ![Transfer form](docs/screenshots/transfer.png) |
 
 ## Tech stack
 
