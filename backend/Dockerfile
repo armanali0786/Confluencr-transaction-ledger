@@ -26,7 +26,8 @@ COPY --from=build /app/backend/package.json /app/backend/prisma.config.ts /app/b
 COPY --from=build /app/backend/prisma ./backend/prisma
 COPY --from=build /app/backend/src ./backend/src
 COPY --from=build /app/backend/dist ./backend/dist
-COPY --chmod=755 backend/docker-entrypoint.sh ./backend/
+COPY --from=build /app/backend/dist ./backend/dist
+COPY --chmod=755 docker-entrypoint.sh ./
 WORKDIR /app/backend
 USER node
 EXPOSE 4000
